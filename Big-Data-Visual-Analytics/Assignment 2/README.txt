@@ -17,7 +17,7 @@ EXECUTION GUIDELINES
 			python3 volume.py
 			
 	
-	4. On running the programs, there will be input prompts as given below. Enter a float value in the first prompt. Enter "y" for yes and "n" for no 	     in the second prompt.
+	4. On running the programs, there will be input prompts as given below. Enter a float value in the first prompt. Enter "y" for yes and "n" for no in the second prompt.
 	
 			In isocon.py - 
 			Enter isocontour value:
