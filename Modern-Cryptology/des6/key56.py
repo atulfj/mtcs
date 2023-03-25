@@ -54,22 +54,6 @@ S = [[[14, 4, 13, 1, 2, 15, 11, 8, 3 , 10, 6, 12, 5, 9, 0, 7],
     [7, 11, 4, 1, 9, 12, 14, 2, 0, 6, 10, 13, 15, 3, 5, 8],
     [2, 1, 14, 7, 4, 10, 8, 13, 15, 12, 9, 0, 3, 5, 6, 11]]]
 
-# Inverse permutation
-IP = [9, 17, 23, 31, 13, 28,  2, 18,
-	 24, 16, 30,  6, 26, 20, 10, 1,
-	 8, 14, 25,  3, 4, 29, 11, 19,
-	 32, 12, 22,  7, 5, 27, 15, 21]
-
-# Permuted choice 2 for generating sub-keys
-PC2 = [14, 17, 11, 24,  1, 5, 
-        3, 28 ,15,  6, 21, 10, 
-        23, 19, 12,  4, 26, 8, 
-        16,  7, 27, 20, 13, 2, 
-        41, 52, 31, 37, 47, 55, 
-        30, 40, 51, 45, 33, 48, 
-        44, 49, 39, 56, 34, 53, 
-        46, 42, 50, 36, 29, 32]
-
 # Initial permutation of DES
 P_initial = [58, 50, 42, 34, 26, 18, 10, 2,  
             60, 52, 44, 36, 28, 20, 12, 4,  
@@ -89,16 +73,6 @@ P_final = [40, 8, 48, 16, 56, 24, 64, 32,
           35, 3, 43, 11, 51, 19, 59, 27,  
           34, 2, 42, 10, 50, 18, 58, 26,  
           33, 1, 41, 9, 49, 17, 57, 25 ]
-
-# Reverse final permutation
-P_rev_final = [57, 49, 41, 33, 25, 17, 9,  1,
-              59, 51, 43, 35, 27, 19, 11, 3,
-              61, 53, 45, 37, 29, 21, 13, 5,
-              63, 55, 47, 39, 31, 23, 15, 7,
-              58, 50, 42, 34, 26, 18, 10, 2,
-              60, 52, 44, 36, 28, 20, 12, 4,
-              62, 54, 46, 38, 30, 22, 14, 6,
-              64, 56, 48, 40, 32, 24, 16, 8]
 
 # S-Box permuation
 P_sbox = [16, 7, 20, 21, 29, 12, 28, 17,  
@@ -131,9 +105,150 @@ def perm(bitstr, pmap, n_bits):
 def leftShift(bitstr, amount):
     return bitstr[amount:] + bitstr[0:amount]
 
+# Generate a round-key for the given key and round
+def generateRoundKey(key, round):
+    l = key[0:28]
+    r = key[28:56]
+    roundKey = []
+    for i in range(round):
+        l = leftShift(l, shifts[i])
+        r = leftShift(r, shifts[i])
+        key = l + r
+        roundKey.extend([perm(key, key_compress, 48)])
+    return roundKey
+
+# DES encryption for given input (ip), key (key) and rounds (n_rounds)
+def desbad(ip, key, n_rounds):
+    # 1. Initial permutation
+    ip = perm(ip, P_initial, 64)
+    # 2. Separate left and right halves
+    l = ip[:32]
+    r = ip[32:]
+    # 3. Perform rounds
+    for i in range(n_rounds):
+        # 4. Bit expansion
+        E_ip = perm(r, E, 48)
+        # 5. XOR with key
+        key_xor_ip = str(bin(np.bitwise_xor(int(E_ip, 2), int(key[i], 2)))[2:])
+        if len(key_xor_ip) != 48:
+            key_xor_ip += ('0' * (48 - len(key_xor_ip)))
+        # 6. S-box output
+        sbox_op = ""
+        for j in range(8):
+            aux = (bin(S[j][int(key_xor_ip[j*6] + key_xor_ip[j*6+5], 2)][int(key_xor_ip[j*6+1:j*6+5], 2)])[2:])
+            sbox_op += aux + ('0' * (4 - len(aux)))
+        sbox_op = perm(sbox_op, P_sbox, 32)
+        # 7. Final XOR
+        xor = str(bin(np.bitwise_xor(int(l, 2), int(sbox_op, 2)))[2:])
+        # Padding if output isn't 32 bits
+        if len(xor) != 32:
+            xor += ('0' * (32 - len(xor)))
+        l = xor 
+        # Swap
+        if i != n_rounds-1:
+            aux = l
+            l = r
+            r = aux 
+        op = l + r
+        # 8. Return after final permutation
+        return perm(op, P_final, 64) 
+    
+
+def des_forward(ip, key, n_rounds):
+    # 1. Initial permutation
+    ip = perm(ip, P_initial, 64)
+    # 2. Left and right halves
+    l = ip[:32]
+    r = ip[32:]
+    # 3. Perform round operations
+    for i in range(n_rounds):
+        # 4. Bit expansion
+        e_ip = perm(r, E, 48)
+        # 5. XOR with key
+        key_xor_ip = str(bin(np.bitwise_xor(int(e_ip, 2), int(key[i], 2)))[2:])
+        if len(key_xor_ip)!= 48:
+            key_xor_ip = ('0' * (48-len(key_xor_ip))) + key_xor_ip
+        # 6. S-box operations
+        s_out = ''
+        for j in range(8):
+            aux = (bin(S[j][int(key_xor_ip[j*6] + key_xor_ip[j*6+5], 2)][int(key_xor_ip[j*6+1:j*6+5], 2)])[2:])
+            s_out+= ('0' * (4-len(aux)) + aux)
+        s_out = perm(s_out, P_sbox, 32)
+        # 7. Final XOR
+        xor = str(bin(np.bitwise_xor(int(l, 2), int(s_out, 2)))[2:])
+        if len(xor) != 32:
+            xor= ('0' * (32-len(xor))) + xor
+        l = xor
+
+        if i != n_rounds-1:
+            t = l
+            l = r
+            r = t
+
+    
+    op = l + r
+    return perm(op, P_final, 64)
+
 ##########################################################################################
 ##########################################################################################
+
+charToHexStr = {'f': '0000',
+                'g': '0001',
+                'h': '0010',
+                'i': '0011',
+                'j': '0100',
+                'k': '0101',
+                'l': '0110',
+                'm': '0111',
+                'n': '1000',
+                'o': '1001',
+                'p': '1010',
+                'q': '1011',
+                'r': '1100',
+                's': '1101',
+                't': '1110',
+                'u': '1111'}
 
 # The following key is obtained after running findkey1.py
 
 rawKey = "x11xx1xx01011x100xx11x11100x0111001x11011001x11x0111x001"
+
+# Take a plaintext and ciphertext pair from p1.txt and c1. txt to find round-keys
+ptxt, ctxt = "", ""
+with open('p1.txt') as file:
+    line = file.readline().strip('\n')
+    for char in line:
+        ptxt += charToHexStr[char]
+print(f"Chosen plaintext: \n{ptxt}")
+
+with open('c1.txt') as file:
+    line = file.readline().strip('\n')
+    for char in line:
+        ctxt += charToHexStr[char]
+print(f"Corresponding ciphertext: \n{ctxt}")
+
+# Brute force to find all possible 14-bit strings
+all14 = [] # all 14-bit strings
+for i in range(2**14):
+    bitstr = str(bin(i)[2:])
+    all14.append(('0') * (14-len(bitstr)) + bitstr) # padding
+
+candidates = [] # candidates for actual 56-bit key
+for bitstr in all14:
+    curKey = list(rawKey)
+    cur = 0
+    # Place the bits in missing places of 42-bit key
+    for j in range(len(curKey)):
+        if curKey[j] == 'x':
+            curKey[j] = bitstr[cur]
+            cur += 1
+    candidates.append(''.join(curKey))
+
+key = "" # actual 56 bits key
+
+for candidate in candidates:
+    c = generateRoundKey(candidate, 6)
+    if des_forward(ptxt, c, 6) == ctxt:
+        key = candidate
+
+print(f"The key is: \n{key}")
