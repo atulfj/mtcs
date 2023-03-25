@@ -209,7 +209,7 @@ charToHexStr = {'f': '0000',
                 't': '1110',
                 'u': '1111'}
 
-# The following key is obtained after running findkey1.py
+# The following key is obtained from key42.py
 
 rawKey = "x11xx1xx01011x100xx11x11100x0111001x11011001x11x0111x001"
 
