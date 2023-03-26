@@ -117,43 +117,6 @@ def generateRoundKey(key, round):
         roundKey.extend([perm(key, key_compress, 48)])
     return roundKey
 
-# DES encryption for given input (ip), key (key) and rounds (n_rounds)
-def desbad(ip, key, n_rounds):
-    # 1. Initial permutation
-    ip = perm(ip, P_initial, 64)
-    # 2. Separate left and right halves
-    l = ip[:32]
-    r = ip[32:]
-    # 3. Perform rounds
-    for i in range(n_rounds):
-        # 4. Bit expansion
-        E_ip = perm(r, E, 48)
-        # 5. XOR with key
-        key_xor_ip = str(bin(np.bitwise_xor(int(E_ip, 2), int(key[i], 2)))[2:])
-        if len(key_xor_ip) != 48:
-            key_xor_ip += ('0' * (48 - len(key_xor_ip)))
-        # 6. S-box output
-        sbox_op = ""
-        for j in range(8):
-            aux = (bin(S[j][int(key_xor_ip[j*6] + key_xor_ip[j*6+5], 2)][int(key_xor_ip[j*6+1:j*6+5], 2)])[2:])
-            sbox_op += aux + ('0' * (4 - len(aux)))
-        sbox_op = perm(sbox_op, P_sbox, 32)
-        # 7. Final XOR
-        xor = str(bin(np.bitwise_xor(int(l, 2), int(sbox_op, 2)))[2:])
-        # Padding if output isn't 32 bits
-        if len(xor) != 32:
-            xor += ('0' * (32 - len(xor)))
-        l = xor 
-        # Swap
-        if i != n_rounds-1:
-            aux = l
-            l = r
-            r = aux 
-        op = l + r
-        # 8. Return after final permutation
-        return perm(op, P_final, 64) 
-    
-
 def des_forward(ip, key, n_rounds):
     # 1. Initial permutation
     ip = perm(ip, P_initial, 64)
