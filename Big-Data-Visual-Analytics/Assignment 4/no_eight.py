@@ -7,7 +7,7 @@ or 0.1 percent, nan values didn't appear. According to the scipy
 documentation
 (https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.griddata.html),
 the function by default assigns fill_value=nan to "points outside the
-convex hull of the input points". You told us to explicitly select the 8
+convex hull of the input points". We were told to explicitly select the 8
 corner points of the data. Because of this, all the sampled points will be
 inside the convex hull made by those sampled points. Hence, nan values
 will not appear at any sampling percentage.
