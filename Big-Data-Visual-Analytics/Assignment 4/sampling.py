@@ -6,7 +6,7 @@ from vtk import *
 import numpy as np
 
 # SIMPLE RANDOM SAMPLING 
-def srs(data, arr_name, percent):
+def srs(data, percent):
 	# Sampled output
 	sample = []
 	sample_values = []
@@ -114,7 +114,7 @@ if __name__=='__main__':
 	data = readVTI("Isabel_3D.vti")
 	
 	# Perform sampling
-	sample, sample_values = srs(data, 'Pressure', options.percent)
+	sample, sample_values = srs(data, options.percent)
 	
 	# Write the sampled points into sample.vtp file
 	writeVTP(np.array(sample), np.array(sample_values), "sample.vtp")
@@ -122,23 +122,26 @@ if __name__=='__main__':
 	# Reconstruction using sampled points
 	gx, gy, gz = np.mgrid[0:250, 0:250, 0:50] # create 3D grid
 	print(f"starting {options.method} interpolation...")
-	tic = time.time()
+	tic = time.time() # start clock
 	recon_values = scipy.interpolate.griddata(sample, sample_values, (gx, gy, gz), method=options.method)
-	toc = time.time()
 	print(f"finished {options.method} interpolation")
-	print(f"reconstruction time: {round(toc - tic, 2)} seconds")
 	
 	# Nearest neighbor interpolation if nan values are present
 	nan_vals = np.isnan(recon_values)
 	nan_count = np.count_nonzero(nan_vals)
 	if nan_count != 0:
 		print("handling NaN values ...")
-		# .. handle nan ..
+		nan_idx = np.argwhere(~nan_vals)
+		recon_values = scipy.interpolate.griddata(nan_idx, recon_values[~nan_vals], (gx, gy, gz), method='nearest')
 		print(f"{nan_count} NaN values were replaced with nearest neighbor value")
+		
+	toc = time.time() # stop clock
+	print(f"reconstruction time: {round(toc - tic, 2)} seconds")
 		
 	
 	# Data scalar values
 	scalar_values = data.GetPointData().GetScalars()
+	
 	# Get ground truth values and reconstructed values
 	arrgt, arr_recon = [], []
 	for i in range(250):
